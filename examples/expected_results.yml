@@ -1,0 +1,45 @@
+ready: "Ready."
+opto:
+  output_bits: ["10010110", "01101001"]
+  baudrate: 1
+  port_zero_bit_one: 1
+  port_format: True
+  module_id: "OPTO-MATEIII(vI)"
+  port_one_data: "01101001"
+  port_zero_data: "10010110"
+  port_number: 1
+
+switch:
+  module_id: "SWITCH-MATE/HP(vI) r1.0"
+  relay: "01010101"
+  settling_time: "120"
+  read_relay_config: "01010101"
+  closed: "11111111"
+  cleared: "00000000"
+
+gsm:
+  module_id: "GSM-MATE4/8(vI) r1.0"
+  relay: "00000001"
+  settling_time: "120"
+
+ldm:
+  output_bits: [[0, 0, 0, 0, 0, 0, 0, 0], []]
+  baudrate: 3
+  port_zero_bit_five: 1
+  port_format: 1
+  module_id: "LDM-MATE(vI) r1.0"
+  binary_data: "00000000"
+  hex_data: "00"
+
+mux:
+  module_id: "MUX-MATE(vI) r2.1"
+  relay: "0000000000000001"
+  settling_time: "120"
+  mux_mode: 1
+  closed: "1111111111111111"
+  cleared: "0000000000000000"
+
+sfm:
+  module_id: "SFM-MATE(vI) r2.0"
+  short_status: "00000000"
+  settling_time: "120"
