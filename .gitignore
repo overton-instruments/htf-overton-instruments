@@ -2,7 +2,8 @@ __pycache__/
 htf_overton.egg-info/
 venv/
 dist/
-../.idea/
+.idea/*
+*.whl
 *.html
 *.sig
 *.pyc

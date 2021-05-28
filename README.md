@@ -10,7 +10,7 @@ This extension works with our community license.
 ## Installation guide
 The htf-overton extension can be installed using pip.
 
-``pip install htf-overton-instruments``
+``pip install -i https://pypi.hilster.io htf-overton-instruments``
 
 Naturally it requires the htf package to be installed, which can be done by following [this guide](https://docs.hilster.io/htf/latest/installation.html#installation-of-htf-via-pip)
 

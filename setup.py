@@ -1,6 +1,10 @@
 from setuptools import setup, find_packages
-
 import htf_overton_instruments
+from os import path
+
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name='htf-overton-instruments',
@@ -16,11 +20,13 @@ setup(
     install_requires=[
         'htf>=2.0',
     ],
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     classifiers=[
-        'Development Status :: 4 - Beta',
-        'Intended Audience :: Developers, QA Testers',
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.X'
+        'Programming Language :: Python :: 3'
     ],
 )
