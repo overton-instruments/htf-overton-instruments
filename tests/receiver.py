@@ -11,13 +11,13 @@ class Receiver:
         Args:
             print_messages (bool): if ``True`` all incoming and outgoing messages are printed to the console.
         """
-        self._serial = serial.Serial("COM5")
+        self._serial = serial.Serial("COM5", timeout=1)
         self._serial.baudrate = 19200
         self._serial.bytesize = 8
         self._serial.parity = serial.PARITY_NONE
         self._serial.stopbits = serial.STOPBITS_ONE
         self._serial.xonxoff = 0
-        self.baudrate_code = "0"
+        self.baudrate_code = "3"
         self.output_bits = [[0, 1, 1, 0, 1, 0, 0, 1], [1, 0, 0, 1, 0, 1, 1, 0]]
         self.settling_time = ""
         self.relays = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -28,6 +28,8 @@ class Receiver:
         ]
         self.mux_mode = "0"
         self.port = 0
+        self.port_format = 1
+        self.port_data = ""
         self.print_messages = print_messages
 
     def send_data(self, data):
@@ -42,18 +44,14 @@ class Receiver:
         """ Waits for an incoming message and sends the appropriate response. """
         self._serial.reset_input_buffer()
         message = ""
-        while True:
 
-            byte = self._serial.read()
-            byte = byte.decode('ascii')
+        while True:
+            byte = self._serial.read(1).decode('ascii')
             message += byte
 
-            if len(byte) == 0:
-                break
-
-            if byte == '\n' or byte == '\r':
+            if byte == '\r':
                 if self.print_messages:
-                    print(self._serial.port + " received: " + message)
+                    print(self._serial.port + " received: " + repr(message))
                 if message == "\r":
                     self.send_data("->")
                     message = ""
@@ -65,9 +63,8 @@ class Receiver:
                         self.send_data(f"<{self.baudrate_code}>")
                     elif "DO" in message:
                         if "?" in message:
-                            for char in message:
-                                if char.isdigit():
-                                    self.send_data(f"<{self.output_bits[self.port][int(char)]}>")
+                            bit = len(self.output_bits[self.port]) - 1 - int(message[6])
+                            self.send_data(f"<{self.output_bits[self.port][bit]}>")
                         else:
                             selected = None
 
@@ -76,12 +73,17 @@ class Receiver:
                                     if selected is not None:
                                         self.output_bits[self.port][int(selected)] = int(char)
                                     selected = char
-                    elif "ID?" in message:
-                        self.send_data("<OPTO-MATEIII(vI)>")
-                    elif "PF?" in message:
-                        self.send_data("<>")
+                    elif "PF" in message:
+                        if "?" in message:
+                            self.send_data(f"<{self.port_format}>")
+                        else:
+                            self.port_format = int(message[5])
                     elif "PS?" in message:
-                        self.send_data(f"<{self.output_bits[self.port]}>")
+                        if self.port_format == 0:
+                            data = self.port_data
+                        else:
+                            data = hex(int(self.port_data, 2))
+                        self.send_data(f"<{data}>")
                     elif "PN" in message:
                         for char in message:
                             if char.isdigit():
@@ -89,6 +91,14 @@ class Receiver:
                                 self.send_data("<>")
                             elif char == "?":
                                 self.send_data(f"<{self.port}>")
+                    elif "PW" in message:
+                        if self.port_format == 0:
+                            data = message[5:13]
+                        else:
+                            data = message[5:7]
+                        data = "{0:08b}".format(int(data))
+                        print("Port data set to:", data)
+                        self.port_data = data
                     elif len(message) > 1:
                         self.send_data("<>")
                     message = ""
@@ -99,9 +109,9 @@ class Receiver:
                                 self.baudrate_code = char
                         self.send_data(f"<{self.baudrate_code}>")
                     elif "ID?" in message:
-                        self.send_data("<SWITCH-MATE(vI)>")
+                        self.send_data("<SWITCH-MATE/HP(vI) r1.0>")
                     elif "RS?" in message:
-                        self.send_data(f"<{self.relays}>")
+                        self.send_data(f"<{''.join(str(state) for state in self.relays)}>")
                     elif "ST" in message:
                         if "?" in message:
                             self.send_data(f"<{self.settling_time}>")
@@ -116,13 +126,12 @@ class Receiver:
                             if char.isdigit():
                                 return_preset += char
                                 if len(return_preset) == 2:
-                                    self.send_data(f"<{self.presets[int(return_preset)]}>")
+                                    return_preset = int(return_preset)
+                                    self.send_data(f"<{''.join(str(state) for state in self.presets[return_preset])}>")
                     elif "SR0" in message:
-                        for char in message:
-                            if char.isdigit():
-                                selected_relay = char
-                                if selected_relay is not None:
-                                    self.relays[int(selected_relay)] = int(char)
+                        selected_relay = len(self.relays) - int(message[6])
+                        char = message[7]
+                        self.relays[int(selected_relay)] = int(char)
                     elif "WC" in message:
                         write_relay = ""
                         for char in message:
@@ -151,9 +160,9 @@ class Receiver:
                                 self.baudrate_code = char
                         self.send_data(f"<{self.baudrate_code}>")
                     elif "ID?" in message:
-                        self.send_data("<GSM Mate>")
+                        self.send_data("<GSM-MATE4/8(vI) r1.0>")
                     elif "RS?" in message:
-                        self.send_data(f"<{self.relays}>")
+                        self.send_data(f"<{''.join(str(state) for state in self.relays)}>")
                     elif "ST" in message:
                         if "?" in message:
                             self.send_data(f"<{self.settling_time}>")
@@ -163,11 +172,9 @@ class Receiver:
                                 if char.isdigit():
                                     self.settling_time += char
                     elif "SR0" in message:
-                        for char in message:
-                            if char.isdigit():
-                                selected_relay = char
-                                if selected_relay is not None:
-                                    self.relays[int(selected_relay)] = int(char)
+                        selected_relay = len(self.relays) - int(message[6])
+                        char = message[7]
+                        self.relays[int(selected_relay)] = int(char)
                     elif len(message) > 1:
                         self.send_data("<>")
                     message = ""
@@ -178,9 +185,11 @@ class Receiver:
                                 self.baudrate_code = char
                         self.send_data(f"<{self.baudrate_code}>")
                     elif "ID?" in message:
-                        self.send_data("<MUX Mate>")
+                        self.send_data("<MUX-MATE(vI) r2.1>")
                     elif "RS?" in message:
-                        self.send_data(f"<{self.relays}>")
+                        data = ''.join(str(state) for state in self.relays)
+                        data = data.zfill(16)
+                        self.send_data(f"<{data}>")
                     elif "ST" in message:
                         if "?" in message:
                             self.send_data(f"<{self.settling_time}>")
@@ -195,13 +204,12 @@ class Receiver:
                             if char.isdigit():
                                 return_preset += char
                                 if len(return_preset) == 2:
-                                    self.send_data(f"<{self.presets[int(return_preset)]}>")
+                                    return_preset = int(return_preset)
+                                    self.send_data(f"<{''.join(str(state) for state in self.presets[return_preset])}>")
                     elif "SR0" in message:
-                        for char in message:
-                            if char.isdigit():
-                                selected_relay = char
-                                if selected_relay is not None:
-                                    self.relays[int(selected_relay)] = int(char)
+                        selected_relay = len(self.relays) - int(message[6])
+                        char = message[7]
+                        self.relays[int(selected_relay)] = int(char)
                     elif "MM" in message:
                         if "?" in message:
                             self.send_data(f"<{self.mux_mode}>")
@@ -211,9 +219,9 @@ class Receiver:
                                 if char.isdigit():
                                     self.mux_mode += char
                     elif "MC" in message:
-                        self.relays = [0, 0, 0, 0, 0, 0, 0, 0]
+                        self.relays = "0000000000000000"
                     elif "MS" in message:
-                        self.relays = [1, 1, 1, 1, 1, 1, 1, 1]
+                        self.relays = "1111111111111111"
                     elif len(message) > 1:
                         self.send_data("<>")
                     message = ""
@@ -224,7 +232,7 @@ class Receiver:
                                 self.baudrate_code = char
                         self.send_data(f"<{self.baudrate_code}>")
                     elif "ID?" in message:
-                        self.send_data("<SFM Mate>")
+                        self.send_data("<SFM-MATE(vI) r2.0>")
                     elif "ST" in message:
                         if "?" in message:
                             self.send_data(f"<{self.settling_time}>")

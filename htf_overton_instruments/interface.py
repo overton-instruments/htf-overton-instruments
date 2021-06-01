@@ -17,7 +17,7 @@ class OIInterface:
         self.device_port = 0
         self.collect_bits = False
         self.print_messages = True
-        self.all_bits = [[], []]
+        self.all_bits = ["", ""]
         self.reply = None
         self._serial = serial.Serial(timeout=1)
         self._serial.port = self.comport
@@ -72,7 +72,7 @@ class OIInterface:
         message = ''
         tmax = time.time() + timeout
 
-        # read until '>'
+        # read until '\n' or timeout
         while byte := self.get_next_byte():
             if time.time() > tmax:
                 raise TimeoutError("Timeout has occurred.")
@@ -103,7 +103,6 @@ class OIInterface:
             message (str):
         """
         self.reply = None
-
         message = message.strip()
         message = message.replace('\r', '')
         if message == '->':
@@ -119,7 +118,7 @@ class OIInterface:
 
         if message != '':
             if self.collect_bits:
-                self.all_bits[self.device_port].append(int(message))
+                self.all_bits[self.device_port] += message
             else:
                 if len(message) == 1:
                     self.reply = int(message)

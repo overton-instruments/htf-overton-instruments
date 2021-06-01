@@ -1,50 +1,20 @@
+import time
 import htf
+from tests.receiver import Receiver
+from htf_overton_instruments import device
+from htf.core import Thread
 
 
-@htf.tags("opto_simulated")
-def test_opto_mate_simulated(opto_mate, assertions, expected):
-    opto_mate.open_port()
-
-    opto_mate.is_device_ready
-    assertions.assert_equal(opto_mate.reply, expected['ready'])
-
-    opto_mate.output_bit
-    assertions.assert_list_equal(opto_mate.reply, expected['opto']['output_bits'])
-
-    opto_mate.baudrate = 1
-    opto_mate.baudrate
-    assertions.assert_equal(opto_mate.reply, expected['opto']['baudrate'])
-
-    opto_mate.set_output_bit = 5, 1
-    opto_mate.port_number = 0
-    opto_mate.output_bit = 1
-    assertions.assert_equal(opto_mate.reply, expected['opto']['port_zero_bit_one'])
-
-    opto_mate.port_format
-    assertions.assert_true(opto_mate.reply)
-
-    opto_mate.port_format = 1
-    assertions.assert_true(opto_mate.reply)
-
-    opto_mate.module_id
-    assertions.assert_equal(opto_mate.reply, expected['opto']['module_id'])
-
-    opto_mate.port_number = 1
-    opto_mate.port_data
-    assertions.assert_equal(opto_mate.reply, expected['opto']['port_one_data'])
-    opto_mate.port_number = 0
-    opto_mate.port_data
-    assertions.assert_equal(opto_mate.reply, expected['opto']['port_zero_data'])
-
-    opto_mate.port_data = 10001001
-    assertions.assert_true(opto_mate.reply)
-    opto_mate.port_number = 1
-    opto_mate.port_number
-    assertions.assert_equal(opto_mate.reply, expected['opto']['port_number'])
+def run_receiver():
+    receiver = Receiver(print_messages=True)
+    receiver.get_message()
 
 
-@htf.tags("switch_mate")
-def test_switch_mate(switch_mate, assertions, expected, step):
+def test_simulated_responses_switch_mate(assertions, step, expected):
+    receiver_thread = Thread(target=run_receiver)
+    receiver_thread.start()
+    time.sleep(1)
+    switch_mate = device.SwitchMateV1("COM4")
     switch_mate.open_port()
 
     with step("Checking if Switch Mate is ready"):
@@ -104,11 +74,56 @@ def test_switch_mate(switch_mate, assertions, expected, step):
         switch_mate.relay
         assertions.assert_equal(switch_mate.reply, expected['switch']['cleared'])
 
+    switch_mate._serial.reset_input_buffer()
     switch_mate.close_port()
+    receiver_thread.stop()
 
 
-@htf.tags("gsm_mate")
-def test_gsm_mate(gsm_mate, assertions, expected, step):
+def test_simulated_responses_opto_mate(opto_mate, assertions, expected):
+    receiver_thread = Thread(target=run_receiver)
+    receiver_thread.start()
+    opto_mate.open_port()
+
+    opto_mate.is_device_ready
+    assertions.assert_equal(opto_mate.reply, expected['ready'])
+
+    opto_mate.output_bit
+    assertions.assert_list_equal(opto_mate.reply, expected['opto']['output_bits'])
+
+    opto_mate.baudrate = 1
+    opto_mate.baudrate
+    assertions.assert_equal(opto_mate.reply, expected['opto']['baudrate'])
+
+    opto_mate.set_output_bit = 5, 1
+    opto_mate.port_number = 0
+    opto_mate.output_bit = 1
+    assertions.assert_equal(opto_mate.reply, expected['opto']['port_zero_bit_one'])
+
+    opto_mate.port_format
+    assertions.assert_true(opto_mate.reply)
+
+    opto_mate.port_format = 1
+    assertions.assert_true(opto_mate.reply)
+
+    opto_mate.port_number = 1
+    opto_mate.port_data
+    assertions.assert_equal(opto_mate.reply, expected['opto']['port_one_data'])
+    opto_mate.port_number = 0
+    opto_mate.port_data
+    assertions.assert_equal(opto_mate.reply, expected['opto']['port_zero_data'])
+
+    opto_mate.port_data = 10001001
+    assertions.assert_true(opto_mate.reply)
+    opto_mate.port_number = 1
+    opto_mate.port_number
+    assertions.assert_equal(opto_mate.reply, expected['opto']['port_number'])
+    receiver_thread.stop()
+
+
+def test_simulated_responses_gsm_mate(assertions, expected, step):
+    receiver_thread = Thread(target=run_receiver)
+    receiver_thread.start()
+    gsm_mate = device.GSMMate("COM4")
     gsm_mate.open_port()
 
     with step("Checking if GSM Mate is ready"):
@@ -142,19 +157,18 @@ def test_gsm_mate(gsm_mate, assertions, expected, step):
         assertions.assert_true(gsm_mate.reply)
 
     gsm_mate.close_port()
+    receiver_thread.stop()
 
 
-@htf.tags("ldm_mate")
-def test_ldm_mate(ldm_mate, assertions, expected, step):
+def test_simulated_responses_ldm_mate(assertions, expected, step):
+    receiver_thread = Thread(target=run_receiver)
+    receiver_thread.start()
+    ldm_mate = device.LDMMate("COM4")
     ldm_mate.open_port()
 
     with step("Checking if LDM Mate is ready"):
         ldm_mate.is_device_ready
         assertions.assert_equal(ldm_mate.reply, expected['ready'])
-
-    with step("Checking LDM Mate's module ID"):
-        ldm_mate.module_id
-        assertions.assert_equal(ldm_mate.reply, expected['ldm']['module_id'])
 
     with step("Checking LDM Mate's output bits"):
         ldm_mate.output_bit
@@ -165,15 +179,15 @@ def test_ldm_mate(ldm_mate, assertions, expected, step):
         assertions.assert_equal(ldm_mate.reply, expected['ldm']['baudrate'])
 
     # shows how to write to the device and test for it, could not be confirmed as working on our device
-    # with step("Setting output bit 5 to 1"):
-    #     ldm_mate.set_output_bit = 5, 1
-    #
-    # with step("Checking output bit 5"):
-    #     ldm_mate.output_bit = 5
-    #     assertions.assert_equal(ldm_mate.reply, expected['ldm']['port_zero_bit_five'])
-    #
-    # with step("Writing port data"):
-    #     ldm_mate.port_data = 0F
+    with step("Setting output bit 5 to 1"):
+        ldm_mate.set_output_bit = 5, 1
+
+    with step("Checking output bit 5"):
+        ldm_mate.output_bit = 5
+        assertions.assert_equal(ldm_mate.reply, expected['ldm']['port_zero_bit_five'])
+
+    with step("Writing port data"):
+        ldm_mate.port_data = 0x0F
 
     with step("Setting LDM Mate's port format"):
         ldm_mate.port_format = 0
@@ -195,9 +209,13 @@ def test_ldm_mate(ldm_mate, assertions, expected, step):
         ldm_mate.port_data
         assertions.assert_equal(ldm_mate.reply, expected['ldm']['hex_data'])
 
+    receiver_thread.stop()
 
-@htf.tags("mux_mate")
-def test_mux_mate(mux_mate, assertions, expected, step):
+
+def test_simulated_responses_mux_mate(assertions, expected, step):
+    receiver_thread = Thread(target=run_receiver)
+    receiver_thread.start()
+    mux_mate = device.MUXMate("COM4")
     mux_mate.open_port()
 
     with step("Checking if MUX Mate is ready"):
@@ -249,10 +267,13 @@ def test_mux_mate(mux_mate, assertions, expected, step):
         assertions.assert_equal(mux_mate.reply, expected['mux']['cleared'])
 
     mux_mate.close_port()
+    receiver_thread.stop()
 
 
-@htf.tags("sfm_mate")
-def test_sfm_mate(sfm_mate, assertions, expected, step):
+def test_simulated_responses_sfm_mate(assertions, expected, step):
+    receiver_thread = Thread(target=run_receiver)
+    receiver_thread.start()
+    sfm_mate = device.SFMMate("COM4")
     sfm_mate.open_port()
 
     with step("Checking if SFM Mate is ready"):
@@ -276,11 +297,9 @@ def test_sfm_mate(sfm_mate, assertions, expected, step):
         assertions.assert_equal(sfm_mate.reply, expected['sfm']['settling_time'])
 
     sfm_mate.close_port()
+    receiver_thread.stop()
 
 
-if __name__ == "__main__":
-    # htf.main(tags="switch_mate")
-    htf.main(tags="gsm_mate", tests=["fixtures"])
-    # htf.main(tags="ldm_mate")
-    # htf.main(tags="mux_mate")
-    # htf.main(tags="sfm_mate")
+if __name__ == '__main__':
+    htf.main(tests=["fixtures"] + [test_simulated_responses_sfm_mate])
+

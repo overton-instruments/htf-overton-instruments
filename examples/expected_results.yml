@@ -2,7 +2,7 @@ ready: "Ready."
 opto:
   output_bits: ["10010110", "01101001"]
   baudrate: 1
-  port_zero_bit_one: 1
+  port_zero_bit_one: 0
   port_format: True
   module_id: "OPTO-MATEIII(vI)"
   port_one_data: "01101001"
@@ -23,13 +23,13 @@ gsm:
   settling_time: "120"
 
 ldm:
-  output_bits: [[0, 0, 0, 0, 0, 0, 0, 0], []]
+  output_bits: ['10010110', '']
   baudrate: 3
   port_zero_bit_five: 1
   port_format: 1
   module_id: "LDM-MATE(vI) r1.0"
-  binary_data: "00000000"
-  hex_data: "00"
+  binary_data: "00001111"
+  hex_data: "0x0F"
 
 mux:
   module_id: "MUX-MATE(vI) r2.1"
